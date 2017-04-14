@@ -4,6 +4,9 @@ import com.rabbitmq.client.*;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.HashMap;
+import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -14,7 +17,10 @@ public class AMQPClient {
     private static final Logger logger = Logger.getLogger(WebSocketClientHandler.class.getName());
     private final Channel channel;
     private final String exchangeName = "client-exchange";
+    private final String userName;
     private final BigInteger privateKey;
+    // Use a hashmap of lists to represent the text sent to/received from each user
+    private final HashMap<String, LinkedBlockingQueue<String>> messages;
 
     /** Initialize an AMQP client for consuming/sending messages.
      *
@@ -24,25 +30,36 @@ public class AMQPClient {
      * @param privateKey private key for this client (for decrypting messages)
      * @throws Exception
      */
-    public AMQPClient(String uri, String userName, BigInteger privateKey) throws Exception {
+    public AMQPClient(String uri,
+                      String userName,
+                      BigInteger privateKey,
+                      String[] users) throws Exception {
+        this.userName = userName;
+
         // Store our private key for decrypting
         this.privateKey = privateKey;
+        messages = new HashMap<String, LinkedBlockingQueue<String>>();
+
+        // Add all users to the list of users
+        for (String item : users) {
+            messages.put(item, new LinkedBlockingQueue<String>());
+        }
 
         // Build connection factory
         ConnectionFactory factory = new ConnectionFactory();
         // URI of the format: amqp://userName:password@hostname:portNumber/virtualHost
         factory.setUri(uri);
         Connection conn = factory.newConnection();
-        this.channel = conn.createChannel();
+        channel = conn.createChannel();
 
         String queueName = channel.queueDeclare().getQueue();
 
         // Create direct exchange and queue
-        this.channel.exchangeDeclare(this.exchangeName, "direct");
+        channel.exchangeDeclare(exchangeName, "direct");
         // Listen to our user's queue
-        this.channel.queueBind(queueName, exchangeName, userName);
+        channel.queueBind(queueName, exchangeName, userName);
 
-        Consumer consumerCb = new DefaultConsumer(this.channel) {
+        Consumer consumerCb = new DefaultConsumer(channel) {
             @Override
             public void handleDelivery(String consumerTag,
                                        Envelope envelope,
@@ -55,8 +72,8 @@ public class AMQPClient {
                 // message = RSA.decrypt(message, privateKey)
                 // Add received message to internal queue
                 logger.log(Level.FINE, "Decrypted message: {0}", message);
-                // publish message to UI
-                // messages.callBack(envelope.getRoutingKey(), message)
+                // Add message to internal queue for this user
+                messages.get(envelope.getRoutingKey()).add(envelope.getRoutingKey() + ": " + message);
             }
         };
     }
@@ -70,11 +87,25 @@ public class AMQPClient {
      */
     public void sendMessage(String targetUser,
                             BigInteger targetUserPublicKey,
-                            String message) throws IOException {
+                            String message) {
         // Encrypt
         // message = RSA.encrypt(message, targetUserPublicKey)
         logger.log(Level.FINE, "Sending message: {0} to {1}", new Object[]{message, targetUser});
-        this.channel.basicPublish(this.exchangeName, targetUser, null, message.getBytes());
+        try {
+            channel.basicPublish(exchangeName, targetUser, null, message.getBytes());
+            messages.get(targetUser).add(userName + ": " + message);
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    /** Return the list of messages between us and another client
+     *
+     * @param targetUser
+     * @return
+     */
+    public Queue<String> getMessages(String targetUser){
+        return messages.get(targetUser);
     }
 
 }
