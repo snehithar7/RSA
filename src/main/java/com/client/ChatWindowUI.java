@@ -6,6 +6,7 @@ package com.client;
  */
 
 import java.math.BigInteger;
+import java.util.HashMap;
 
 /**
  *
@@ -18,12 +19,14 @@ public class ChatWindowUI extends javax.swing.JFrame {
     private String userName="test";
     private BigInteger privateKey;
     private String[] users = new String[]{"Alice", "Bob", "Eve"};
+    private HashMap<String, String> userTextMap = new HashMap<>();
 
     /**
      * Creates new form ChatWindowUI
      */
     public ChatWindowUI() {
 
+        initTextMap();
         initComponents();
         try {
             // todo initialize client
@@ -31,7 +34,6 @@ public class ChatWindowUI extends javax.swing.JFrame {
             //                        userName,
             //                        privateKey,
             //                        users);
-            ;
         } catch(Exception e){
             e.printStackTrace();
         }
@@ -40,7 +42,15 @@ public class ChatWindowUI extends javax.swing.JFrame {
 
     public class AMQPReader implements Runnable {
         public void run() {
+            //todo stub;
+        }
+    }
 
+
+    private void initTextMap(){
+        // Add all users to the list of users
+        for (String item: users) {
+            userTextMap.put(item, "");
         }
     }
 
@@ -94,6 +104,12 @@ public class ChatWindowUI extends javax.swing.JFrame {
 
         activeUserList.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         activeUserList.setToolTipText("");
+        activeUserList.setSelectedIndex(0);
+        activeUserList.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
+            public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
+                activeUserListValueChanged(evt);
+            }
+        });
         activeUserListScrollPane.setViewportView(activeUserList);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -144,10 +160,31 @@ public class ChatWindowUI extends javax.swing.JFrame {
     private void enterButtonActionPerformed(java.awt.event.ActionEvent evt) {
         if (inputTextArea.getText() != ""){
             //@todo send text through AMQP
-            chatTextArea.append(userName + ": " + inputTextArea.getText() + "\n");
-            inputTextArea.setText("");
+            if (activeUserList.isSelectionEmpty()) {
+                // Display a prompt
+                chatTextArea.setText("Please select a user to chat with.");
+            } else {
+                // Update the chat history for this user
+                String text = userTextMap.get(activeUserList.getSelectedValue());
+                text += (userName + ": " + inputTextArea.getText() + "\n");
+                userTextMap.put(activeUserList.getSelectedValue(), text);
+                // Show the text
+                chatTextArea.setText(text);
+                // Clear the input text area
+                inputTextArea.setText("");
+            }
         }
     }
+
+    private void activeUserListValueChanged(javax.swing.event.ListSelectionEvent evt) {
+        if (activeUserList.isSelectionEmpty()){
+            chatTextArea.setText("Please select a user to chat with.");
+        } else {
+            // Update to map value
+            chatTextArea.setText(userTextMap.get(activeUserList.getSelectedValue()));
+        }
+    }
+
     /**
      * @param args the command line arguments
      */

@@ -5,8 +5,6 @@ import com.rabbitmq.client.*;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.HashMap;
-import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -20,7 +18,7 @@ public class AMQPClient {
     private final String userName;
     private final BigInteger privateKey;
     // Use a hashmap of lists to represent the text sent to/received from each user
-    private final HashMap<String, LinkedBlockingQueue<String>> messages;
+    private final HashMap<String, String> messages;
 
     /** Initialize an AMQP client for consuming/sending messages.
      *
@@ -28,7 +26,6 @@ public class AMQPClient {
      *     (ex. amqp://userName:password@hostname:portNumber/virtualHost)
      * @param userName username for this client
      * @param privateKey private key for this client (for decrypting messages)
-     * @throws Exception
      */
     public AMQPClient(String uri,
                       String userName,
@@ -38,11 +35,11 @@ public class AMQPClient {
 
         // Store our private key for decrypting
         this.privateKey = privateKey;
-        messages = new HashMap<String, LinkedBlockingQueue<String>>();
+        messages = new HashMap<>();
 
         // Add all users to the list of users
         for (String item : users) {
-            messages.put(item, new LinkedBlockingQueue<String>());
+            messages.put(item, "");
         }
 
         // Build connection factory
@@ -72,8 +69,10 @@ public class AMQPClient {
                 // message = RSA.decrypt(message, privateKey)
                 // Add received message to internal queue
                 logger.log(Level.FINE, "Decrypted message: {0}", message);
-                // Add message to internal queue for this user
-                messages.get(envelope.getRoutingKey()).add(envelope.getRoutingKey() + ": " + message);
+                // Add message to internal history for this user
+                String text = messages.get(envelope.getRoutingKey());
+                text += envelope.getRoutingKey() + ": " + message + "\n";
+                messages.put(envelope.getRoutingKey(), text);
             }
         };
     }
@@ -83,7 +82,6 @@ public class AMQPClient {
      * @param targetUser Target username
      * @param targetUserPublicKey Target user's public key (for encrypting)
      * @param message Message to send
-     * @throws IOException
      */
     public void sendMessage(String targetUser,
                             BigInteger targetUserPublicKey,
@@ -93,18 +91,20 @@ public class AMQPClient {
         logger.log(Level.FINE, "Sending message: {0} to {1}", new Object[]{message, targetUser});
         try {
             channel.basicPublish(exchangeName, targetUser, null, message.getBytes());
-            messages.get(targetUser).add(userName + ": " + message);
+            String text = messages.get(targetUser);
+            text += targetUser + ": " + message + "\n";
+            messages.put(targetUser, text);
         } catch (IOException e){
             e.printStackTrace();
         }
     }
 
-    /** Return the list of messages between us and another client
+    /** Return the text history for target user
      *
-     * @param targetUser
-     * @return
+     * @param targetUser Target user
+     * @return String
      */
-    public Queue<String> getMessages(String targetUser){
+    public String getMessages(String targetUser){
         return messages.get(targetUser);
     }
 
