@@ -17,7 +17,7 @@ public class RSAKey {
 	private BigInteger qInv;
 	private int bitlength = Constant.KEY_LENGTH;
 	
-	RSAKey() {
+	public RSAKey() {
 		setPrime1 (null);
 		setPrime2 (null);
 		setExponent (null);

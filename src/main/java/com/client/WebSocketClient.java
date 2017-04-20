@@ -1,5 +1,7 @@
 package com.client;
 
+import com.security.rsa.RSA;
+import com.security.rsa.RSAKey;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
@@ -7,8 +9,10 @@ import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 import org.jboss.netty.handler.codec.http.websocketx.*;
 
+import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.HashMap;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -16,8 +20,8 @@ import java.util.logging.Logger;
 /**
  * Created by alec on 3/29/17.
  */
-public class WebSocketClient {
-    private static final Logger logger = Logger.getLogger(WebSocketClientHandler.class.getName());
+public class WebSocketClient
+{
     private final URI uri;
     private final ClientBootstrap bootstrap;
     private final String protocol;
@@ -25,23 +29,34 @@ public class WebSocketClient {
     private final ChannelPipelineFactory factory;
     private Channel chan;
 
-    public WebSocketClient(URI uri) throws Exception {
+    public WebSocketClient(URI uri,
+                           String username,
+                           BigInteger publicKey)
+    {
         this.uri = uri;
-        this.protocol = uri.getScheme();
-        this.chan = null;
+        protocol = uri.getScheme();
+        chan = null;
 
         // Create client-side socket channel
         NioClientSocketChannelFactory nio =
                 new NioClientSocketChannelFactory(
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool());
-        this.bootstrap = new ClientBootstrap(nio);
+        bootstrap = new ClientBootstrap(nio);
         // Create handshake
         WebSocketClientHandshakerFactory handshakerFactory = new WebSocketClientHandshakerFactory();
-        this.handshaker = handshakerFactory.newHandshaker(uri, WebSocketVersion.V13, null, false, null);
 
-        this.factory = new ChannelPipelineFactory() {
-            public ChannelPipeline getPipeline() throws Exception {
+        // Add custom headers for username and key
+        HashMap<String, String> customHeaders = new HashMap<String, String>();
+        customHeaders.put("X-USER", username);
+        customHeaders.put("X-CLIENT-KEY", publicKey.toString());
+
+        handshaker = handshakerFactory.newHandshaker(uri, WebSocketVersion.V13, null, false, customHeaders);
+
+        factory = new ChannelPipelineFactory()
+        {
+            public ChannelPipeline getPipeline() throws Exception
+            {
                 ChannelPipeline pipe = Channels.pipeline();
                 pipe.addLast("decoder", new HttpResponseDecoder());
                 pipe.addLast("encoder", new HttpRequestEncoder());
@@ -51,48 +66,51 @@ public class WebSocketClient {
         };
 
         // Create pipelines
-        this.bootstrap.setPipelineFactory(this.factory);
+        bootstrap.setPipelineFactory(factory);
 
         // Connect
-        this.connect();
-
-    }
-
-    private void connect() throws Exception {
-        logger.log(Level.FINE, "Client connecting");
-        ChannelFuture future = this.bootstrap.connect(
-            new InetSocketAddress(this.uri.getHost(), this.uri.getPort()));
-        future.syncUninterruptibly();
-        this.chan = future.getChannel();
-        this.handshaker.handshake(this.chan).syncUninterruptibly();
-    }
-
-    public void sendMessage(String message) throws Exception {
-        logger.log(Level.ALL, "Sending message <{0}>", message);
-        // Encrypt message here
-        logger.log(Level.ALL, "Message encrypted <{0}>", message);
-        this.chan.write(new TextWebSocketFrame(message));
-    }
-
-    public void disconnect() {
-        logger.log(Level.ALL, "Closing websocket connection");
-        this.chan.write(new CloseWebSocketFrame());
-        this.chan.getCloseFuture().awaitUninterruptibly();
-        this.chan.close();
-        this.bootstrap.releaseExternalResources();
-    }
-
-    public static void main(String[] args) throws Exception {
-        URI uri;
-        if (args.length > 0) {
-            uri = new URI(args[0]);
-        } else {
-            uri = new URI("ws://localhost:8080/websocket");
+        try
+        {
+            connect();
+        } catch(Exception e)
+        {
+            e.printStackTrace();
         }
-
-        WebSocketClient ws = new WebSocketClient(uri);
-        ws.sendMessage("Test");
-        ws.disconnect();
     }
 
+    private void connect() throws Exception
+    {
+        System.out.println("Connected");
+        ChannelFuture future = bootstrap.connect(
+            new InetSocketAddress(uri.getHost(), uri.getPort()));
+        future.syncUninterruptibly();
+        chan = future.getChannel();
+        handshaker.handshake(chan).syncUninterruptibly();
+    }
+
+    public void sendMessage(String message) throws Exception
+    {
+        System.out.println("Sending message " + message);
+        // Encrypt message here
+        System.out.println("Message encrypted " + message);
+        chan.write(new TextWebSocketFrame(message));
+    }
+
+    public void disconnect()
+    {
+        System.out.println("Disconnected");
+        chan.write(new CloseWebSocketFrame());
+        chan.getCloseFuture().awaitUninterruptibly();
+        chan.close();
+        bootstrap.releaseExternalResources();
+    }
+
+    public static void main(String[] args) throws Exception
+    {
+        RSA rsa = new RSA();
+        RSAKey key = new RSAKey();
+        WebSocketClient ws = new WebSocketClient(
+                new URI("ws://localhost:4000/ws"),
+                args[0], new BigInteger("1235823"));
+    }
 }

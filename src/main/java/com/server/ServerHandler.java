@@ -112,6 +112,7 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
             HttpResponse response = new DefaultHttpResponse(
                     HttpVersion.HTTP_1_1,
                     HttpResponseStatus.OK);
+            response.setHeader(HttpHeaders.Names.CONTENT_TYPE, "application/json");
             // Set body to json object
             response.setContent(
                     ChannelBuffers.copiedBuffer(json.toString(), CharsetUtil.UTF_8));
@@ -139,4 +140,13 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
         future = channel.write(response);
         future.addListener(ChannelFutureListener.CLOSE);
     }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext context, ExceptionEvent event)
+            throws Exception
+    {
+        event.getCause().printStackTrace();
+        event.getChannel().close();
+    }
+
 }

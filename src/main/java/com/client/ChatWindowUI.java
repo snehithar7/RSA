@@ -5,52 +5,120 @@ package com.client;
  * and open the template in the editor.
  */
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import com.security.rsa.RSA;
+import com.security.rsa.RSAKey;
+import jdk.nashorn.internal.parser.JSONParser;
+import org.json.JSONObject;
+
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.GenericType;
+import javax.ws.rs.core.Response;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.math.BigInteger;
+import java.net.URI;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
  * @author alec.ferguson
  */
 public class ChatWindowUI extends javax.swing.JFrame {
-    private AMQPClient client;
+    // private AMQPClient client;
     // Hardcoded these for now for testing
-    private String serverUri="127.0.0.1";
+    private String serverUri="http://127.0.0.1:4000";
     private String userName="test";
-    private BigInteger privateKey;
-    private String[] users = new String[]{"Alice", "Bob", "Eve"};
-    private HashMap<String, String> userTextMap = new HashMap<>();
+    private WebSocketClient client;
+    private RSA rsa;
+    private RSAKey rsakey;
+    private String[] users = new String[]{};
+    private Map<String, String> userTextMap = new ConcurrentHashMap<>();
+    private Map<String, String> userKeyMap = new ConcurrentHashMap<>();
 
     /**
      * Creates new form ChatWindowUI
      */
-    public ChatWindowUI() {
-
-        initTextMap();
+    public ChatWindowUI(String userName,
+                        String serverUri,
+                        RSA rsa,
+                        RSAKey rsakey)
+    {
         initComponents();
-        try {
-            // todo initialize client
-            //client = new AMQPClient(serverUri,
-            //                        userName,
-            //                        privateKey,
-            //                        users);
+
+        if (serverUri != null)
+        {
+            this.serverUri = serverUri;
+        }
+
+        if (userName != null)
+        {
+            this.userName = userName;
+        }
+
+        this.rsa = rsa;
+        this.rsakey = rsakey;
+
+        try
+        {
+            client = new WebSocketClient(
+                    new URI(this.serverUri + "/ws"),
+                    // todo: put in real public key here
+                    this.userName, new BigInteger("1234"));
         } catch(Exception e){
             e.printStackTrace();
         }
-        Thread AMQPReader = new Thread(new AMQPReader());
+        ScheduledExecutorService executor =
+                Executors.newScheduledThreadPool(10);
+        // Poll the user list endpoint every 10 seconds.
+        executor.scheduleAtFixedRate(new userListReader(), 2, 10, TimeUnit.SECONDS);
     }
 
-    public class AMQPReader implements Runnable {
-        public void run() {
-            //todo stub;
+    public String inStreamToJson(InputStream in) {
+        try {
+            BufferedReader streamReader = new BufferedReader(
+                    new InputStreamReader(in, "UTF-8"));
+            StringBuilder responseStrBuilder = new StringBuilder();
+
+            String inputStr;
+            while ((inputStr = streamReader.readLine()) != null)
+                responseStrBuilder.append(inputStr);
+            return responseStrBuilder.toString();
+        } catch (Exception e)
+        {
+            e.printStackTrace();
         }
+
+        return null;
     }
 
+    public class userListReader implements Runnable {
+        public void run() {
+            Client client = ClientBuilder.newBuilder().newClient();
+            WebTarget target = client.target(serverUri);
+            target = target.path("users");
 
-    private void initTextMap(){
-        // Add all users to the list of users
-        for (String item: users) {
-            userTextMap.put(item, "");
+            Invocation.Builder builder = target.request();
+            Response response = builder.get();
+            InputStream in = response.readEntity(InputStream.class);
+            String json = inStreamToJson(in);
+            userKeyMap = new Gson().fromJson(json,
+                    new TypeToken<HashMap<String, String>>() {}.getType());
+            userKeyMap.keySet().toArray(users);
+            System.out.println("Polling connected users: " + json);
         }
     }
 
@@ -104,7 +172,6 @@ public class ChatWindowUI extends javax.swing.JFrame {
 
         activeUserList.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         activeUserList.setToolTipText("");
-        activeUserList.setSelectedIndex(0);
         activeUserList.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
             public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
                 activeUserListValueChanged(evt);
@@ -215,7 +282,11 @@ public class ChatWindowUI extends javax.swing.JFrame {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new ChatWindowUI().setVisible(true);
+                new ChatWindowUI(
+                        args[0],
+                        null,
+                        new RSA(),
+                        new RSAKey()).setVisible(true);
             }
         });
     }

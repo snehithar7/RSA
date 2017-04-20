@@ -81,7 +81,7 @@ public class AMQPClient {
      *  public key.
      * @param targetUser Target username
      * @param targetUserPublicKey Target user's public key (for encrypting)
-     * @param message Message to send
+     * @param message Client to send
      */
     public void sendMessage(String targetUser,
                             BigInteger targetUserPublicKey,
