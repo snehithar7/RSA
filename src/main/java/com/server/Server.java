@@ -11,14 +11,18 @@ import java.util.concurrent.Executors;
 /**
  * Created by alec.ferguson on 4/20/2017.
  */
-public class Server {
+public class Server
+{
 
-    public static void main(String[] args) {
+    public static void main(String[] args)
+    {
+        // Create channel factory
         ChannelFactory factory =
                 new NioServerSocketChannelFactory(
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool());
 
+        // Boosttrap
         ServerBootstrap bootstrap = new ServerBootstrap(factory);
         bootstrap.setPipelineFactory(new PipelineFactory());
 
@@ -28,9 +32,12 @@ public class Server {
         // Start server on port 4000
         bootstrap.bind(new InetSocketAddress(4000));
 
-        try {
+        // Attempt to start server
+        try
+        {
             System.out.println("Listening on " + InetAddress.getLocalHost().toString() + ":" + 4000);
-        } catch (Exception e){
+        } catch (Exception e)
+        {
             e.printStackTrace();
         }
     }

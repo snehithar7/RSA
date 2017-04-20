@@ -11,9 +11,10 @@ import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 /**
  * Created by alec.ferguson on 4/20/2017.
  */
-public class PipelineFactory implements ChannelPipelineFactory {
-    public ChannelPipeline getPipeline() throws Exception {
-        // Create a default pipeline implementation.
+public class PipelineFactory implements ChannelPipelineFactory
+{
+    public ChannelPipeline getPipeline() throws Exception
+    {
         ChannelPipeline pipeline = pipeline();
         pipeline.addLast("decoder", new HttpRequestDecoder());
         pipeline.addLast("aggregator", new HttpChunkAggregator(65536));
