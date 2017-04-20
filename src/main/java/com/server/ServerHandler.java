@@ -69,7 +69,6 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
                                    HttpRequest request)
     {
         final Channel channel = context.getChannel();
-        boolean success = false;
 
         // Handle websocket connection request.
         if (request.getUri().equals(PATH))
@@ -98,7 +97,7 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
                     connectedClients.put(username,
                             new Client(username, key, channel));
                 }
-                success = true;
+                return;
             }
         } else if (request.getUri().equals(USERS))
         {
@@ -120,17 +119,14 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
             httpResponse(context,
                     response,
                     request);
-            success = true;
-        }
-        // Error response on fail
-        if (!success) {
-            httpResponse(context,
-                    new DefaultHttpResponse(
-                        HttpVersion.HTTP_1_1,
-                        HttpResponseStatus.BAD_REQUEST),
-                    request);
             return;
         }
+        // Error response on fail
+        httpResponse(context,
+                new DefaultHttpResponse(
+                    HttpVersion.HTTP_1_1,
+                    HttpResponseStatus.BAD_REQUEST),
+                request);
     }
 
     public void httpResponse(ChannelHandlerContext context,
@@ -141,9 +137,6 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
         ChannelFuture future;
         // Write response to channel
         future = channel.write(response);
-        // Close channel on non-200
-        if (response.getStatus().getCode() != 200){
-            future.addListener(ChannelFutureListener.CLOSE);
-        }
+        future.addListener(ChannelFutureListener.CLOSE);
     }
 }
