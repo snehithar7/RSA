@@ -42,7 +42,9 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
         if (frame instanceof TextWebSocketFrame)
         {
             // Parse json frame
-            JSONObject object = new JSONObject(frame.toString());
+            String frameText = ((TextWebSocketFrame) frame).getText();
+            System.out.println("Server got message: " + frameText);
+            JSONObject object = new JSONObject(frameText);
             String to = object.getString("to");
 
             // Get the target channel

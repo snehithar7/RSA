@@ -88,6 +88,7 @@ public class ChatWindowUI extends javax.swing.JFrame {
                 Executors.newScheduledThreadPool(10);
         // Poll the user list endpoint every 10 seconds.
         executor.scheduleAtFixedRate(new userListReader(), 0, 10, TimeUnit.SECONDS);
+        executor.scheduleAtFixedRate(new messageReader(), 0, 100, TimeUnit.MILLISECONDS);
     }
 
     public String inStreamToJson(InputStream in) {
@@ -154,6 +155,43 @@ public class ChatWindowUI extends javax.swing.JFrame {
             // if (currentSelected != null)
             //    activeUserList.setSelectedValue(currentSelected, true);
             System.out.println("Polling connected users: " + json);
+        }
+    }
+
+    public class messageReader implements Runnable
+    {
+        public void run()
+        {
+            try
+            {
+                while(client.msgqueue.peek() != null)
+                {
+                    JSONObject json = new JSONObject(client.msgqueue.remove());
+                    String from = json.get("from").toString();
+                    String to = json.get("to").toString();
+                    String message = json.get("message").toString();
+
+                    String currentText = userTextMap.get(from);
+                    String newText = (from + ": " + message + "\n");
+                    if (currentText == "" || currentText == null)
+                    {
+                        currentText = newText;
+                    }
+                    else
+                    {
+                        currentText += newText;
+                    }
+                    userTextMap.put(from, currentText);
+                    // Show the text if the message is from the selected user
+                    if (activeUserList.getSelectedValue() == from)
+                        System.out.println("Writing chat");
+                        chatTextArea.setText(currentText);
+                        chatTextArea.repaint();
+                }
+            }catch(Exception e)
+            {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -262,19 +300,33 @@ public class ChatWindowUI extends javax.swing.JFrame {
     }// </editor-fold>
 
     private void sendMessage(String message,
-                             String targetUser) {
+                             String targetUser)
+    {
+        // Build JSON message
+        JSONObject json = new JSONObject();
+        json.put("from", userName);
+        json.put("to", targetUser);
+        json.put("message", message);
+
+        try
+        {
+            client.sendMessage(json.toString());
+        } catch(Exception e)
+        {
+            e.printStackTrace();
+        }
 
     }
 
     private void enterButtonActionPerformed(java.awt.event.ActionEvent evt) {
         if (inputTextArea.getText() != ""){
-            //@todo send text through AMQP
             if (activeUserList.isSelectionEmpty()) {
                 // Display a prompt
                 chatTextArea.setText("Please select a user to chat with.");
             } else {
                 // Update the chat history for this user
-                String currentText = userTextMap.get(activeUserList.getSelectedValue());
+                String targetUser = activeUserList.getSelectedValue();
+                String currentText = userTextMap.get(targetUser);
                 String newText = (this.userName + ": " + inputTextArea.getText() + "\n");
                 if (currentText == "" || currentText == null)
                 {
@@ -284,6 +336,8 @@ public class ChatWindowUI extends javax.swing.JFrame {
                 {
                     currentText += newText;
                 }
+                // Send message over socket
+                sendMessage(inputTextArea.getText(), targetUser);
                 userTextMap.put(activeUserList.getSelectedValue(), currentText);
                 // Show the text
                 chatTextArea.setText(currentText);

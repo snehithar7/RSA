@@ -9,10 +9,12 @@ import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 import org.jboss.netty.handler.codec.http.websocketx.*;
 
+import java.io.*;
 import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.HashMap;
+import java.util.Queue;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,7 +29,10 @@ public class WebSocketClient
     private final String protocol;
     private final WebSocketClientHandshaker handshaker;
     private final ChannelPipelineFactory factory;
+    private final WebSocketClientHandler handler;
     private Channel chan;
+//    public BufferedReader reader;
+    public Queue<String> msgqueue;
 
     public WebSocketClient(URI uri,
                            String username,
@@ -54,6 +59,9 @@ public class WebSocketClient
         customHeaders.put("X-CLIENT-EXPONENT", exponent.toString());
 
         handshaker = handshakerFactory.newHandshaker(uri, WebSocketVersion.V13, null, false, customHeaders);
+        handler = new WebSocketClientHandler(handshaker);
+//        reader = handler.reader;
+        msgqueue = handler.msgqueue;
 
         factory = new ChannelPipelineFactory()
         {
@@ -62,7 +70,7 @@ public class WebSocketClient
                 ChannelPipeline pipe = Channels.pipeline();
                 pipe.addLast("decoder", new HttpResponseDecoder());
                 pipe.addLast("encoder", new HttpRequestEncoder());
-                pipe.addLast("ws-handler", new WebSocketClientHandler(handshaker));
+                pipe.addLast("ws-handler", handler);
                 return pipe;
             }
         };
