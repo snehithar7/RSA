@@ -48,7 +48,7 @@ public class ChatWindowUI extends javax.swing.JFrame {
     private WebSocketClient client;
     private RSA rsa;
     private RSAKey rsakey;
-    private String[] users = new String[]{"Alice", "Bob", "Eve"};
+    private String[] users = new String[]{};
     private Map<String, String> userTextMap = new ConcurrentHashMap<>();
     private Map<String, String> userKeyMap = new ConcurrentHashMap<>();
 
@@ -282,7 +282,7 @@ public class ChatWindowUI extends javax.swing.JFrame {
     /**
      * @param args the command line arguments
      */
-    public static void main(String args[]) {
+    public static void main(final String args[]) {
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
         /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
