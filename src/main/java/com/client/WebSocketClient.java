@@ -31,7 +31,8 @@ public class WebSocketClient
 
     public WebSocketClient(URI uri,
                            String username,
-                           BigInteger publicKey)
+                           BigInteger publicKey,
+                           BigInteger exponent)
     {
         this.uri = uri;
         protocol = uri.getScheme();
@@ -50,6 +51,7 @@ public class WebSocketClient
         HashMap<String, String> customHeaders = new HashMap<String, String>();
         customHeaders.put("X-USER", username);
         customHeaders.put("X-CLIENT-KEY", publicKey.toString());
+        customHeaders.put("X-CLIENT-EXPONENT", exponent.toString());
 
         handshaker = handshakerFactory.newHandshaker(uri, WebSocketVersion.V13, null, false, customHeaders);
 
@@ -111,6 +113,7 @@ public class WebSocketClient
         RSAKey key = new RSAKey();
         WebSocketClient ws = new WebSocketClient(
                 new URI("ws://localhost:4000/ws"),
-                args[0], new BigInteger("1235823"));
+                args[0], new BigInteger("1235823"),
+                new BigInteger("1239123123"));
     }
 }

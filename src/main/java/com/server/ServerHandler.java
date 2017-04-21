@@ -7,6 +7,7 @@ import org.jboss.netty.handler.codec.http.websocketx.*;
 import org.jboss.netty.util.CharsetUtil;
 import org.json.JSONObject;
 
+import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,6 +20,7 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
     private static final String USERS = "/users";
     private static final String KEY_HEADER = "X-CLIENT-KEY";
     private static final String USER_HEADER = "X-USER";
+    private static final String EXPONENT_HEADER = "X-CLIENT-EXPONENT";
 
     @Override
     public void messageReceived(ChannelHandlerContext context,
@@ -75,6 +77,7 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
         {
             String username = request.getHeader(USER_HEADER);
             String key = request.getHeader(KEY_HEADER);
+            String exponent = request.getHeader(EXPONENT_HEADER);
             ChannelFuture handshake;
 
             // Close connection if user did not send expected headers
@@ -93,9 +96,13 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
                 if (handshake.isDone()) {
                     System.out.println(
                             "Client connected with name <" + username +
-                                    "> and key <" + key + ">");
+                                    ">, key <" + key + ">, exponent <" +
+                                    exponent + ">");
                     connectedClients.put(username,
-                            new Client(username, key, channel));
+                            new Client(username,
+                                    new BigInteger(key),
+                                    new BigInteger(exponent),
+                                    channel));
                 }
                 return;
             }
@@ -106,7 +113,11 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
             // Iterate over usermap and get all public keys
             for (Map.Entry<String, Client> entry :
                     connectedClients.entrySet()) {
-                json.put(entry.getKey(), entry.getValue().getPublicKey());
+                json.put(
+                        entry.getKey(),
+                        entry.getValue().getPublicKey().toString() +
+                                ":" +
+                        entry.getValue().getExponent().toString());
             }
             // Build response object
             HttpResponse response = new DefaultHttpResponse(

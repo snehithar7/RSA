@@ -50,7 +50,7 @@ public class ChatWindowUI extends javax.swing.JFrame {
     private RSAKey rsakey;
     private String[] users = new String[]{};
     private Map<String, String> userTextMap = new ConcurrentHashMap<>();
-    private Map<String, String> userKeyMap = new ConcurrentHashMap<>();
+    private Map<String, RSA> userKeyMap = new ConcurrentHashMap<>();
 
     /**
      * Creates new form ChatWindowUI
@@ -79,14 +79,15 @@ public class ChatWindowUI extends javax.swing.JFrame {
             client = new WebSocketClient(
                     new URI(this.serverUri + "/ws"),
                     // todo: put in real public key here
-                    this.userName, new BigInteger("1234"));
+                    this.userName, rsakey.getBigPrime(),
+                    rsakey.getExponent());
         } catch(Exception e){
             e.printStackTrace();
         }
         ScheduledExecutorService executor =
                 Executors.newScheduledThreadPool(10);
         // Poll the user list endpoint every 10 seconds.
-        executor.scheduleAtFixedRate(new userListReader(), 2, 10, TimeUnit.SECONDS);
+        executor.scheduleAtFixedRate(new userListReader(), 0, 10, TimeUnit.SECONDS);
     }
 
     public String inStreamToJson(InputStream in) {
@@ -107,8 +108,10 @@ public class ChatWindowUI extends javax.swing.JFrame {
         return null;
     }
 
-    public class userListReader implements Runnable {
-        public void run() {
+    public class userListReader implements Runnable
+    {
+        public void run()
+        {
             // Make request to server for active user list
             Client client = ClientBuilder.newBuilder().newClient();
             WebTarget target = client.target(serverUri);
@@ -121,8 +124,28 @@ public class ChatWindowUI extends javax.swing.JFrame {
             // Parse JSON
             InputStream in = response.readEntity(InputStream.class);
             String json = inStreamToJson(in);
-            userKeyMap = new Gson().fromJson(json,
+            HashMap<String, String> map = new Gson().fromJson(json,
                     new TypeToken<HashMap<String, String>>() {}.getType());
+
+            // Update the keymap
+            for (Map.Entry<String, String> entry : map.entrySet())
+            {
+                String[] s = entry.getValue().split(":");
+                String key = entry.getKey();
+
+                // If the key is already in the map, do nothing
+                if (userKeyMap.containsKey(key))
+                    continue;
+                // Otherwise build a new RSA key af
+                else
+                {
+                    RSAKey rsakey = new RSAKey();
+                    rsakey.setBigPrime(new BigInteger(s[0]));
+                    rsakey.setExponent(new BigInteger(s[1]));
+                    userKeyMap.put(key, new RSA(rsakey));
+                }
+            }
+
             // Update user array
             String newUsers[] = userKeyMap.keySet().toArray(new String[]{});
             activeUserList.setListData(newUsers);
@@ -238,6 +261,11 @@ public class ChatWindowUI extends javax.swing.JFrame {
         pack();
     }// </editor-fold>
 
+    private void sendMessage(String message,
+                             String targetUser) {
+
+    }
+
     private void enterButtonActionPerformed(java.awt.event.ActionEvent evt) {
         if (inputTextArea.getText() != ""){
             //@todo send text through AMQP
@@ -309,11 +337,16 @@ public class ChatWindowUI extends javax.swing.JFrame {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
+                RSAKey testkey = new RSAKey();
+                testkey.GenerateKeys();
+
+                RSA testRSA = new RSA(testkey);
+
                 new ChatWindowUI(
                         args[0],
                         null,
-                        new RSA(),
-                        new RSAKey()).setVisible(true);
+                        testRSA,
+                        testkey).setVisible(true);
             }
         });
     }

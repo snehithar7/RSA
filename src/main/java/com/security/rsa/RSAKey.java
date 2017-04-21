@@ -69,11 +69,11 @@ public class RSAKey {
 		return q;
 	}
 	
-	void setExponent (BigInteger exp){
+	public void setExponent (BigInteger exp){
 		e = exp;
 	}
 	
-	BigInteger getExponent () {
+	public BigInteger getExponent () {
 		return e;
 	}
 	
@@ -93,11 +93,11 @@ public class RSAKey {
 		dP = crtprime1;
 	}
 	
-	BigInteger getBigPrime(){
+	public BigInteger getBigPrime(){
 		return n;
 	}
 	
-	void setBigPrime(BigInteger bigPrime){
+	public void setBigPrime(BigInteger bigPrime){
 		n = bigPrime;
 	}
 	BigInteger getdPrime2(){
