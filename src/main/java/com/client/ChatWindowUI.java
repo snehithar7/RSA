@@ -12,6 +12,7 @@ import com.security.rsa.RSAKey;
 import jdk.nashorn.internal.parser.JSONParser;
 import org.json.JSONObject;
 
+import javax.swing.*;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Invocation;
@@ -33,6 +34,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static java.awt.SystemColor.text;
+
 /**
  *
  * @author alec.ferguson
@@ -45,7 +48,7 @@ public class ChatWindowUI extends javax.swing.JFrame {
     private WebSocketClient client;
     private RSA rsa;
     private RSAKey rsakey;
-    private String[] users = new String[]{};
+    private String[] users = new String[]{"Alice", "Bob", "Eve"};
     private Map<String, String> userTextMap = new ConcurrentHashMap<>();
     private Map<String, String> userKeyMap = new ConcurrentHashMap<>();
 
@@ -57,8 +60,6 @@ public class ChatWindowUI extends javax.swing.JFrame {
                         RSA rsa,
                         RSAKey rsakey)
     {
-        initComponents();
-
         if (serverUri != null)
         {
             this.serverUri = serverUri;
@@ -71,6 +72,7 @@ public class ChatWindowUI extends javax.swing.JFrame {
 
         this.rsa = rsa;
         this.rsakey = rsakey;
+        initComponents();
 
         try
         {
@@ -107,17 +109,27 @@ public class ChatWindowUI extends javax.swing.JFrame {
 
     public class userListReader implements Runnable {
         public void run() {
+            // Make request to server for active user list
             Client client = ClientBuilder.newBuilder().newClient();
             WebTarget target = client.target(serverUri);
             target = target.path("users");
 
             Invocation.Builder builder = target.request();
             Response response = builder.get();
+
+            // String currentSelected = activeUserList.getSelectedValue();
+            // Parse JSON
             InputStream in = response.readEntity(InputStream.class);
             String json = inStreamToJson(in);
             userKeyMap = new Gson().fromJson(json,
                     new TypeToken<HashMap<String, String>>() {}.getType());
-            userKeyMap.keySet().toArray(users);
+            // Update user array
+            String newUsers[] = userKeyMap.keySet().toArray(new String[]{});
+            activeUserList.setListData(newUsers);
+
+            // Update selection
+            // if (currentSelected != null)
+            //    activeUserList.setSelectedValue(currentSelected, true);
             System.out.println("Polling connected users: " + json);
         }
     }
@@ -148,6 +160,7 @@ public class ChatWindowUI extends javax.swing.JFrame {
         chatTextArea.setColumns(20);
         chatTextArea.setLineWrap(true);
         chatTextArea.setRows(5);
+        chatTextArea.setText("");
         chatTextAreaScrollPane.setViewportView(chatTextArea);
 
         userListLabel.setText("Users");
@@ -156,7 +169,7 @@ public class ChatWindowUI extends javax.swing.JFrame {
 
         usernameTextField.setEditable(false);
         usernameTextField.setToolTipText("");
-        usernameTextField.setText(userName);
+        usernameTextField.setText(this.userName);
 
         inputTextArea.setColumns(20);
         inputTextArea.setLineWrap(true);
@@ -177,6 +190,7 @@ public class ChatWindowUI extends javax.swing.JFrame {
                 activeUserListValueChanged(evt);
             }
         });
+        activeUserList.setListData(users);
         activeUserListScrollPane.setViewportView(activeUserList);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -232,23 +246,36 @@ public class ChatWindowUI extends javax.swing.JFrame {
                 chatTextArea.setText("Please select a user to chat with.");
             } else {
                 // Update the chat history for this user
-                String text = userTextMap.get(activeUserList.getSelectedValue());
-                text += (userName + ": " + inputTextArea.getText() + "\n");
-                userTextMap.put(activeUserList.getSelectedValue(), text);
+                String currentText = userTextMap.get(activeUserList.getSelectedValue());
+                String newText = (this.userName + ": " + inputTextArea.getText() + "\n");
+                if (currentText == "" || currentText == null)
+                {
+                    currentText = newText;
+                }
+                else
+                {
+                    currentText += newText;
+                }
+                userTextMap.put(activeUserList.getSelectedValue(), currentText);
                 // Show the text
-                chatTextArea.setText(text);
+                chatTextArea.setText(currentText);
                 // Clear the input text area
                 inputTextArea.setText("");
             }
         }
     }
 
-    private void activeUserListValueChanged(javax.swing.event.ListSelectionEvent evt) {
-        if (activeUserList.isSelectionEmpty()){
+    private void activeUserListValueChanged(javax.swing.event.ListSelectionEvent evt)
+    {
+        String currentText = userTextMap.get(activeUserList.getSelectedValue());
+        if (activeUserList.isSelectionEmpty())
+        {
             chatTextArea.setText("Please select a user to chat with.");
         } else {
             // Update to map value
-            chatTextArea.setText(userTextMap.get(activeUserList.getSelectedValue()));
+            if (currentText != null && currentText != chatTextArea.getText()) {
+                chatTextArea.setText(userTextMap.get(activeUserList.getSelectedValue()));
+            }
         }
     }
 

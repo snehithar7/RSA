@@ -128,6 +128,7 @@ public class ServerHandler extends SimpleChannelUpstreamHandler {
                     HttpVersion.HTTP_1_1,
                     HttpResponseStatus.BAD_REQUEST),
                 request);
+        return;
     }
 
     public void httpResponse(ChannelHandlerContext context,
