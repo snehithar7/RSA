@@ -6,6 +6,10 @@
 package com.rsa.rsasecuritychatui;
 import java.io.*;
 import java.util.*;
+
+import com.client.ChatWindowUI;
+import com.security.rsa.RSA;
+import com.security.rsa.RSAKey;
 import org.apache.http.*;
 import org.apache.http.client.*;
 import org.apache.http.impl.client.*;
@@ -50,6 +54,8 @@ public class Loginform extends javax.swing.JFrame {
         jLabel4 = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
         jLabel6 = new javax.swing.JLabel();
+        jServerUriLabel = new javax.swing.JLabel();
+        jServerUriTextField = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setMinimumSize(new java.awt.Dimension(450, 300));
@@ -69,7 +75,15 @@ public class Loginform extends javax.swing.JFrame {
 
         jLabel2.setText("Password:");
         getContentPane().add(jLabel2);
-        jLabel2.setBounds(20, 180, 80, 20);
+        jLabel2.setBounds(20, 165, 80, 20);
+
+        jServerUriLabel.setText("Server URI: ");
+        getContentPane().add(jServerUriLabel);
+        jServerUriLabel.setBounds(20, 190, 80, 20);
+
+        getContentPane().add(jServerUriTextField);
+        jServerUriTextField.setBounds(130, 190, 191, 28);
+        jServerUriTextField.setText("http://127.0.0.1:4000");
 
         jPasswordField1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -77,7 +91,7 @@ public class Loginform extends javax.swing.JFrame {
             }
         });
         getContentPane().add(jPasswordField1);
-        jPasswordField1.setBounds(130, 180, 191, 28);
+        jPasswordField1.setBounds(130, 160, 191, 28);
 
         jButton1.setText("Submit");
         jButton1.addActionListener(new java.awt.event.ActionListener() {
@@ -86,7 +100,7 @@ public class Loginform extends javax.swing.JFrame {
             }
         });
         getContentPane().add(jButton1);
-        jButton1.setBounds(140, 210, 88, 29);
+        jButton1.setBounds(140, 220, 88, 29);
 
         jButton2.setText("Reset");
         jButton2.addActionListener(new java.awt.event.ActionListener() {
@@ -95,7 +109,7 @@ public class Loginform extends javax.swing.JFrame {
             }
         });
         getContentPane().add(jButton2);
-        jButton2.setBounds(240, 210, 86, 29);
+        jButton2.setBounds(240, 220, 86, 29);
 
         jLabel3.setFont(new java.awt.Font("Lucida Grande", 0, 36)); // NOI18N
         jLabel3.setText("     Login");
@@ -130,7 +144,7 @@ public class Loginform extends javax.swing.JFrame {
        // jButton jButton2 = new jButton("reset");
       jTextField1.setText(null);
       jPasswordField1.setText(null);
-      
+
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
@@ -138,27 +152,37 @@ public class Loginform extends javax.swing.JFrame {
       
         String username = jTextField1.getText();
         char[] p = jPasswordField1.getPassword();
-     String  pwd = p.toString();
-        
-        HttpClient client = HttpClientBuilder.create().build();
-        HttpPost Post = new HttpPost("http://localhost:8089/RSASecurityChatUI/Loginform?uname="+username +"&pwd=" +pwd);
-        try
-        {
-         List<NameValuePair> nameValuePairs =  new   ArrayList<NameValuePair>(2);
-         nameValuePairs.add(new BasicNameValuePair("username",username));
-         nameValuePairs.add(new BasicNameValuePair("pwd",pwd));
-         Post.setEntity(new  UrlEncodedFormEntity(nameValuePairs));
-         
-         HttpResponse  rsp = client.execute(Post);
-         HttpEntity entity = rsp.getEntity();
-        InputStream inputStream = entity.getContent();
-        String response =  convertStreamToString(inputStream);
-        System.out.println("Response from server : " + response);
-        }catch(ClientProtocolException e){
-            e.printStackTrace();
-        }catch(IOException e){
-            e.printStackTrace();
-        }
+        String  pwd = p.toString();
+
+        // Create keys
+        RSAKey key = new RSAKey();
+        key.GenerateKeys();
+        RSA rsa = new RSA(key);
+
+        ChatWindowUI chatWindow = new ChatWindowUI(username, jServerUriTextField.getText(), rsa, key);
+        chatWindow.setVisible(true);
+        setVisible(false);
+//      @todo login not implemented
+//      HttpClient client = HttpClientBuilder.create().build();
+
+//      HttpPost Post = new HttpPost("http://localhost:8089/RSASecurityChatUI/Loginform?uname="+username +"&pwd=" +pwd);
+//        try
+//        {
+//         List<NameValuePair> nameValuePairs =  new   ArrayList<NameValuePair>(2);
+//         nameValuePairs.add(new BasicNameValuePair("username",username));
+//         nameValuePairs.add(new BasicNameValuePair("pwd",pwd));
+//         Post.setEntity(new  UrlEncodedFormEntity(nameValuePairs));
+//
+//         HttpResponse  rsp = client.execute(Post);
+//         HttpEntity entity = rsp.getEntity();
+//        InputStream inputStream = entity.getContent();
+//        String response =  convertStreamToString(inputStream);
+//        System.out.println("Response from server : " + response);
+//        }catch(ClientProtocolException e){
+//            e.printStackTrace();
+//        }catch(IOException e){
+//            e.printStackTrace();
+//        }
     }//GEN-LAST:event_jButton1ActionPerformed
 private static String convertStreamToString(InputStream is) {
 
@@ -252,5 +276,7 @@ private static String convertStreamToString(InputStream is) {
     private javax.swing.JLabel jLabel6;
     private javax.swing.JPasswordField jPasswordField1;
     private javax.swing.JTextField jTextField1;
+    private javax.swing.JTextField jServerUriTextField;
+    private javax.swing.JLabel jServerUriLabel;
     // End of variables declaration//GEN-END:variables
 }

@@ -41,7 +41,6 @@ import static java.awt.SystemColor.text;
  * @author alec.ferguson
  */
 public class ChatWindowUI extends javax.swing.JFrame {
-    // private AMQPClient client;
     // Hardcoded these for now for testing
     private String serverUri="http://127.0.0.1:4000";
     private String userName="test";
@@ -78,7 +77,6 @@ public class ChatWindowUI extends javax.swing.JFrame {
         {
             client = new WebSocketClient(
                     new URI(this.serverUri + "/ws"),
-                    // todo: put in real public key here
                     this.userName, rsakey.getBigPrime(),
                     rsakey.getExponent());
         } catch(Exception e){
@@ -168,8 +166,10 @@ public class ChatWindowUI extends javax.swing.JFrame {
                 {
                     JSONObject json = new JSONObject(client.msgqueue.remove());
                     String from = json.get("from").toString();
-                    String to = json.get("to").toString();
                     String message = json.get("message").toString();
+
+                    // Decrypt message
+                    message = rsa.decrypt(message);
 
                     String currentText = userTextMap.get(from);
                     String newText = (from + ": " + message + "\n");
@@ -203,7 +203,7 @@ public class ChatWindowUI extends javax.swing.JFrame {
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">
     private void initComponents() {
-
+        setTitle("Let's Chat");
         chatTextAreaScrollPane = new javax.swing.JScrollPane();
         chatTextArea = new javax.swing.JTextArea();
         userListLabel = new javax.swing.JLabel();
@@ -302,6 +302,8 @@ public class ChatWindowUI extends javax.swing.JFrame {
     private void sendMessage(String message,
                              String targetUser)
     {
+        // Encrypt message
+        message = userKeyMap.get(targetUser).encrypt(message);
         // Build JSON message
         JSONObject json = new JSONObject();
         json.put("from", userName);
@@ -315,7 +317,6 @@ public class ChatWindowUI extends javax.swing.JFrame {
         {
             e.printStackTrace();
         }
-
     }
 
     private void enterButtonActionPerformed(java.awt.event.ActionEvent evt) {
