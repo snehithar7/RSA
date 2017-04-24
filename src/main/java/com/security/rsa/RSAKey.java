@@ -1,73 +1,148 @@
-package security;
-
+package com.security.rsa;
 import java.math.BigInteger;
-import java.security.InvalidKeyException;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.util.Random;
+import java.security.SecureRandom;
 
-import javax.crypto.Cipher;
-import javax.crypto.NoSuchPaddingException;
-
+/**
+ * Created by Manasee on 4/5/17.
+ */
 public class RSAKey {
-	public static void main(String[] a) {
-		for (int i = 0; i < 10; i++) {
-			generateKey(1024);
-		}
+	private BigInteger p;
+	private BigInteger dP;
+	private BigInteger q;
+	private BigInteger dQ;
+	private BigInteger d;
+	private BigInteger n;
+	private BigInteger e;
+	private BigInteger phi;
+	private BigInteger qInv;
+	private int bitlength = Constant.KEY_LENGTH;
+
+	public RSAKey() {
+		setPrime1 (null);
+		setPrime2 (null);
+		setExponent (null);
+		setPhi (null);
+		setdPrime1(null);
+		setdPrime2(null);
+		setPrivateKey(null);
+		setBigPrime(null);
+		setQInv(null);
 	}
 
-	public static void generateKey(int size) {
-
-		Random rnd = new Random();
-
-		try {
-			KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
-			KeyPair myPair = kpg.generateKeyPair();
-
-			BigInteger p = BigInteger.probablePrime(size / 2, rnd);
-			BigInteger q = p.nextProbablePrime();
-			/*
-			 * BigInteger p = BigInteger.valueOf(7); BigInteger q =
-			 * BigInteger.valueOf(11);
-			 */
-			BigInteger n = p.multiply(q);
-			BigInteger m = (p.subtract(BigInteger.ONE)).multiply(q
-					.subtract(BigInteger.ONE));
-			BigInteger e = getCoprime(m);
-			BigInteger d = e.modInverse(m);
-			
-			
-			Cipher c = Cipher.getInstance("RSA");
-			// Initiate the Cipher, telling it that it is going to Encrypt, giving it the public key
-			
-
-			System.out.println("p: " + p);
-			System.out.println("q: " + q);
-			// System.out.println("m: "+m);
-			// System.out.println("Modulus: "+n);
-			System.out.println("Key size: " + n.bitLength());
-			System.out.println("Public key: " + e);
-			System.out.println("Private key: " + d);
-			System.out
-					.println("----------------------------------------------------------------------------------------------------\n");
-		} catch (NoSuchAlgorithmException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (NoSuchPaddingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+	RSAKey(	BigInteger prime1,
+			   BigInteger prime2,
+			   BigInteger exp,
+			   BigInteger Phi,
+			   BigInteger pKey){
+		setPrime1 (prime1);
+		setPrime2 (prime2);
+		setExponent (exp);
+		setPhi (Phi);
+		setBigPrime(getPrime1().multiply(getPrime2()));
+		PrecomputedPrimes();
+		setPrivateKey(pKey);
 	}
 
-	public static BigInteger getCoprime(BigInteger m) {
-		Random rnd = new Random();
-		int length = m.bitLength() - 1;
-		BigInteger e = BigInteger.probablePrime(length, rnd);
-		while (!(m.gcd(e)).equals(BigInteger.ONE)) {
-			e = BigInteger.probablePrime(length, rnd);
-		}
+	boolean isNull (BigInteger num) { return num == null; }
+
+	void setPrime1(BigInteger prime1) {
+		p = prime1;
+	}
+
+	void setPrime2 (BigInteger prime2) {
+		q = prime2;
+	}
+
+	void setPrivateKey(BigInteger pub) {
+		d = pub;
+	}
+
+	BigInteger getPrivateKey () {
+		return d;
+	}
+
+	BigInteger getPrime1 () {
+		return p;
+	}
+
+	BigInteger getPrime2 () {
+		return q;
+	}
+
+	public void setExponent (BigInteger exp){
+		e = exp;
+	}
+
+	public BigInteger getExponent () {
 		return e;
 	}
 
+	void setPhi(BigInteger Phi) {
+		phi = Phi;
+	}
+
+	BigInteger getPhi () {
+		return phi;
+	}
+
+	BigInteger getdPrime1(){
+		return dP;
+	}
+
+	void setdPrime1(BigInteger crtprime1){
+		dP = crtprime1;
+	}
+
+	public BigInteger getBigPrime(){
+		return n;
+	}
+
+	public void setBigPrime(BigInteger bigPrime){
+		n = bigPrime;
+	}
+	BigInteger getdPrime2(){
+		return dQ;
+	}
+
+	void setdPrime2(BigInteger crtprime2){
+		dQ = crtprime2;
+	}
+
+	void setQInv(BigInteger qinv) {
+		qInv = qinv;
+	}
+
+	BigInteger getQInv() {
+		return qInv ;
+	}
+
+	public void PrecomputedPrimes () {
+		if (isNull(getExponent())) {
+			setdPrime1 (null);
+			setdPrime2 (null);
+			setQInv(null);
+		}
+		setdPrime1(getExponent().modInverse(getPrime1().subtract(BigInteger.ONE)));
+		setdPrime2(getExponent().modInverse(getPrime2().subtract(BigInteger.ONE)));
+		setQInv(getPrime2().modInverse(getPrime1()));
+
+	}
+
+
+	public void GenerateKeys() {
+		SecureRandom r = new SecureRandom();
+
+		setPrime1(BigInteger.probablePrime(bitlength, r));
+		setPrime2(getPrime1().nextProbablePrime());
+		setBigPrime(getPrime1().multiply(getPrime2()));
+		setPhi((getPrime1().subtract(BigInteger.ONE)).multiply(getPrime2().subtract(BigInteger.ONE)));
+		setExponent(BigInteger.probablePrime(bitlength/2, r));
+
+		while (getPhi().gcd(getExponent()).compareTo(BigInteger.ONE) > 0 && getExponent().compareTo(getPhi()) < 0 ) {
+			getExponent().add(BigInteger.ONE);
+		}
+		setPrivateKey(getExponent().modInverse(getPhi()));
+		PrecomputedPrimes();
+
+	}
 }
