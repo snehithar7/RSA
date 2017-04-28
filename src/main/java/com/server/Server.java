@@ -22,7 +22,7 @@ public class Server
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool());
 
-        // Boosttrap
+        // Bootstrap
         ServerBootstrap bootstrap = new ServerBootstrap(factory);
         bootstrap.setPipelineFactory(new PipelineFactory());
 

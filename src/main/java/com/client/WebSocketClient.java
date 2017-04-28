@@ -1,5 +1,6 @@
 package com.client;
 
+import com.globals.Globals;
 import com.security.rsa.RSA;
 import com.security.rsa.RSAKey;
 import org.jboss.netty.bootstrap.ClientBootstrap;
@@ -31,9 +32,15 @@ public class WebSocketClient
     private final ChannelPipelineFactory factory;
     private final WebSocketClientHandler handler;
     private Channel chan;
-//    public BufferedReader reader;
     public Queue<String> msgqueue;
 
+    /** Construct a websocket client and connect
+     *
+     * @param uri URL to ws endpoint
+     * @param username Username to log in with
+     * @param publicKey Public modulus for this user
+     * @param exponent Public exponent for this user
+     */
     public WebSocketClient(URI uri,
                            String username,
                            BigInteger publicKey,
@@ -54,13 +61,16 @@ public class WebSocketClient
 
         // Add custom headers for username and key
         HashMap<String, String> customHeaders = new HashMap<String, String>();
-        customHeaders.put("X-USER", username);
-        customHeaders.put("X-CLIENT-KEY", publicKey.toString());
-        customHeaders.put("X-CLIENT-EXPONENT", exponent.toString());
+        customHeaders.put(Globals.USER_HEADER, username);
+        customHeaders.put(Globals.KEY_HEADER, publicKey.toString());
+        customHeaders.put(Globals.EXPONENT_HEADER, exponent.toString());
 
-        handshaker = handshakerFactory.newHandshaker(uri, WebSocketVersion.V13, null, false, customHeaders);
+        handshaker = handshakerFactory.newHandshaker(uri,
+                WebSocketVersion.V13,
+                null,
+                false,
+                customHeaders);
         handler = new WebSocketClientHandler(handshaker);
-//        reader = handler.reader;
         msgqueue = handler.msgqueue;
 
         factory = new ChannelPipelineFactory()
@@ -88,6 +98,10 @@ public class WebSocketClient
         }
     }
 
+    /** Perform the ws connection
+     *
+     * @throws Exception
+     */
     private void connect() throws Exception
     {
         System.out.println("Connected");
@@ -98,14 +112,20 @@ public class WebSocketClient
         handshaker.handshake(chan).syncUninterruptibly();
     }
 
+    /** Send a message (String) to the server
+     *
+     * @param message
+     * @throws Exception
+     */
     public void sendMessage(String message) throws Exception
     {
         System.out.println("Sending message " + message);
-        // Encrypt message here
-        System.out.println("Message encrypted " + message);
         chan.write(new TextWebSocketFrame(message));
     }
 
+    /** Disconnect client
+     *
+     */
     public void disconnect()
     {
         System.out.println("Disconnected");

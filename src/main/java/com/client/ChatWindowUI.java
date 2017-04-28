@@ -5,6 +5,7 @@ package com.client;
  * and open the template in the editor.
  */
 
+import com.globals.Globals;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.security.rsa.RSA;
@@ -41,156 +42,61 @@ import static java.awt.SystemColor.text;
  * @author alec.ferguson
  */
 public class ChatWindowUI extends javax.swing.JFrame {
-    // Hardcoded these for now for testing
-    private String serverUri="http://127.0.0.1:4000";
-    private String userName="test";
-    private WebSocketClient client;
-    private RSA rsa;
-    private RSAKey rsakey;
-    private String[] users = new String[]{};
-    private Map<String, String> userTextMap = new ConcurrentHashMap<>();
-    private Map<String, RSA> userKeyMap = new ConcurrentHashMap<>();
+    private String serverUri;
+    private String userName;
+    private Chat chat;
 
-    /**
-     * Creates new form ChatWindowUI
+    /** Creates new form ChatWindowUI
+     *
+     * @param userName
+     * @param serverUri
+     * @param rsa
+     * @param rsakey
      */
     public ChatWindowUI(String userName,
                         String serverUri,
                         RSA rsa,
                         RSAKey rsakey)
     {
-        if (serverUri != null)
-        {
-            this.serverUri = serverUri;
-        }
-
-        if (userName != null)
-        {
-            this.userName = userName;
-        }
-
-        this.rsa = rsa;
-        this.rsakey = rsakey;
+        this.serverUri = serverUri;
+        this.userName = userName;
         initComponents();
 
         try
         {
-            client = new WebSocketClient(
-                    new URI(this.serverUri + "/ws"),
-                    this.userName, rsakey.getBigPrime(),
-                    rsakey.getExponent());
+            chat = new Chat(
+                    this.userName,
+                    new URI(this.serverUri + Globals.WS_PATH),
+                    rsa,
+                    rsakey);
         } catch(Exception e){
             e.printStackTrace();
         }
         ScheduledExecutorService executor =
                 Executors.newScheduledThreadPool(10);
-        // Poll the user list endpoint every 10 seconds.
-        executor.scheduleAtFixedRate(new userListReader(), 0, 10, TimeUnit.SECONDS);
         executor.scheduleAtFixedRate(new messageReader(), 0, 100, TimeUnit.MILLISECONDS);
     }
 
-    public String inStreamToJson(InputStream in) {
-        try {
-            BufferedReader streamReader = new BufferedReader(
-                    new InputStreamReader(in, "UTF-8"));
-            StringBuilder responseStrBuilder = new StringBuilder();
+    /** Thread for reading messages
+     *
+     */
+    public class messageReader implements Runnable {
+        @Override
+        public void run() {
+            chat.readMessages();
 
-            String inputStr;
-            while ((inputStr = streamReader.readLine()) != null)
-                responseStrBuilder.append(inputStr);
-            return responseStrBuilder.toString();
-        } catch (Exception e)
-        {
-            e.printStackTrace();
-        }
-
-        return null;
-    }
-
-    public class userListReader implements Runnable
-    {
-        public void run()
-        {
-            // Make request to server for active user list
-            Client client = ClientBuilder.newBuilder().newClient();
-            WebTarget target = client.target(serverUri);
-            target = target.path("users");
-
-            Invocation.Builder builder = target.request();
-            Response response = builder.get();
-
-            // String currentSelected = activeUserList.getSelectedValue();
-            // Parse JSON
-            InputStream in = response.readEntity(InputStream.class);
-            String json = inStreamToJson(in);
-            HashMap<String, String> map = new Gson().fromJson(json,
-                    new TypeToken<HashMap<String, String>>() {}.getType());
-
-            // Update the keymap
-            for (Map.Entry<String, String> entry : map.entrySet())
-            {
-                String[] s = entry.getValue().split(":");
-                String key = entry.getKey();
-
-                // If the key is already in the map, do nothing
-                if (userKeyMap.containsKey(key))
-                    continue;
-                // Otherwise build a new RSA key af
-                else
-                {
-                    RSAKey rsakey = new RSAKey();
-                    rsakey.setBigPrime(new BigInteger(s[0]));
-                    rsakey.setExponent(new BigInteger(s[1]));
-                    userKeyMap.put(key, new RSA(rsakey));
+            // Users leaving is not yet implemented
+            for(String user: chat.getConnectedUsersMap().keySet()) {
+                // Not very efficient, but it works for now.
+                if(!activeUserListModel.contains(user)) {
+                    activeUserListModel.addElement(user);
                 }
             }
-
-            // Update user array
-            String newUsers[] = userKeyMap.keySet().toArray(new String[]{});
-            activeUserList.setListData(newUsers);
-
-            // Update selection
-            // if (currentSelected != null)
-            //    activeUserList.setSelectedValue(currentSelected, true);
-            System.out.println("Polling connected users: " + json);
-        }
-    }
-
-    public class messageReader implements Runnable
-    {
-        public void run()
-        {
-            try
-            {
-                while(client.msgqueue.peek() != null)
-                {
-                    JSONObject json = new JSONObject(client.msgqueue.remove());
-                    String from = json.get("from").toString();
-                    String message = json.get("message").toString();
-
-                    // Decrypt message
-                    message = rsa.decrypt(message);
-
-                    String currentText = userTextMap.get(from);
-                    String newText = (from + ": " + message + "\n");
-                    if (currentText == "" || currentText == null)
-                    {
-                        currentText = newText;
-                    }
-                    else
-                    {
-                        currentText += newText;
-                    }
-                    userTextMap.put(from, currentText);
-                    // Show the text if the message is from the selected user
-                    if (activeUserList.getSelectedValue() == from)
-                        System.out.println("Writing chat");
-                        chatTextArea.setText(currentText);
-                        chatTextArea.repaint();
-                }
-            }catch(Exception e)
-            {
-                e.printStackTrace();
+            // Also update the chat log after reading messages
+            if (!activeUserList.isSelectionEmpty()) {
+                chatTextArea.setText(chat.getConnectedUsersMap().
+                        get(activeUserList.getSelectedValue()).
+                        getChatHistory());
             }
         }
     }
@@ -213,7 +119,8 @@ public class ChatWindowUI extends javax.swing.JFrame {
         inputTextArea = new javax.swing.JTextArea();
         enterButton = new javax.swing.JButton();
         activeUserListScrollPane = new javax.swing.JScrollPane();
-        activeUserList = new javax.swing.JList<>(users);
+        activeUserListModel = new DefaultListModel();
+        activeUserList = new javax.swing.JList(activeUserListModel);
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -251,7 +158,6 @@ public class ChatWindowUI extends javax.swing.JFrame {
                 activeUserListValueChanged(evt);
             }
         });
-        activeUserList.setListData(users);
         activeUserListScrollPane.setViewportView(activeUserList);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -299,26 +205,13 @@ public class ChatWindowUI extends javax.swing.JFrame {
         pack();
     }// </editor-fold>
 
-    private void sendMessage(String message,
-                             String targetUser)
-    {
-        // Encrypt message
-        message = userKeyMap.get(targetUser).encrypt(message);
-        // Build JSON message
-        JSONObject json = new JSONObject();
-        json.put("from", userName);
-        json.put("to", targetUser);
-        json.put("message", message);
-
-        try
-        {
-            client.sendMessage(json.toString());
-        } catch(Exception e)
-        {
-            e.printStackTrace();
-        }
-    }
-
+    /** Update the chat box to include a new message from us:
+     *    ex. username: hello
+     *  Then send a message over the socket to the target user via
+     *  the chat.
+     *
+     * @param evt
+     */
     private void enterButtonActionPerformed(java.awt.event.ActionEvent evt) {
         if (inputTextArea.getText() != ""){
             if (activeUserList.isSelectionEmpty()) {
@@ -327,38 +220,40 @@ public class ChatWindowUI extends javax.swing.JFrame {
             } else {
                 // Update the chat history for this user
                 String targetUser = activeUserList.getSelectedValue();
-                String currentText = userTextMap.get(targetUser);
-                String newText = (this.userName + ": " + inputTextArea.getText() + "\n");
-                if (currentText == "" || currentText == null)
-                {
-                    currentText = newText;
-                }
-                else
-                {
-                    currentText += newText;
-                }
+                ChatUser user = chat.getConnectedUsersMap().get(targetUser);
+
+                // Build the new message
+                String newMessage = (this.userName +
+                        ": " +
+                        inputTextArea.getText());
+
+                // Update the chat history with this user to include the message
+                user.setChatHistory(user.getChatHistory() + newMessage + "\n");
+
                 // Send message over socket
-                sendMessage(inputTextArea.getText(), targetUser);
-                userTextMap.put(activeUserList.getSelectedValue(), currentText);
+                chat.sendChatMessage(inputTextArea.getText(), targetUser);
+
                 // Show the text
-                chatTextArea.setText(currentText);
+                chatTextArea.setText(user.getChatHistory());
                 // Clear the input text area
                 inputTextArea.setText("");
             }
         }
     }
 
+    /** Handle selection changes in the user list.
+     *
+     * @param evt
+     */
     private void activeUserListValueChanged(javax.swing.event.ListSelectionEvent evt)
     {
-        String currentText = userTextMap.get(activeUserList.getSelectedValue());
         if (activeUserList.isSelectionEmpty())
         {
             chatTextArea.setText("Please select a user to chat with.");
         } else {
-            // Update to map value
-            if (currentText != null && currentText != chatTextArea.getText()) {
-                chatTextArea.setText(userTextMap.get(activeUserList.getSelectedValue()));
-            }
+            chatTextArea.setText(
+                    chat.getConnectedUsersMap().
+                    get(activeUserList.getSelectedValue()).getChatHistory());
         }
     }
 
@@ -399,7 +294,7 @@ public class ChatWindowUI extends javax.swing.JFrame {
 
                 new ChatWindowUI(
                         args[0],
-                        null,
+                        "http://127.0.0.1:4000",
                         testRSA,
                         testkey).setVisible(true);
             }
@@ -409,6 +304,7 @@ public class ChatWindowUI extends javax.swing.JFrame {
     // Variables declaration - do not modify
     private javax.swing.JLabel activeUserLabel;
     private javax.swing.JList<String> activeUserList;
+    private javax.swing.DefaultListModel activeUserListModel;
     private javax.swing.JScrollPane activeUserListScrollPane;
     private javax.swing.JTextArea chatTextArea;
     private javax.swing.JScrollPane chatTextAreaScrollPane;

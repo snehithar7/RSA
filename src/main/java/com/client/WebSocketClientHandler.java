@@ -18,21 +18,19 @@ import java.util.logging.Logger;
 public class WebSocketClientHandler extends SimpleChannelUpstreamHandler
 {
     private final WebSocketClientHandshaker handshaker;
-//    private CircularByteBuffer cbb;
-//    private PrintWriter writer;
-//    private InputStreamReader messageReader;
-//    public BufferedReader reader;
+    // This queue is the message queue for all message received from
+    // the server.
     public Queue<String> msgqueue = new ConcurrentLinkedQueue<String>();
 
     public WebSocketClientHandler(WebSocketClientHandshaker handshaker) {
         this.handshaker = handshaker;
-        // Initialize streams
-//        cbb = new CircularByteBuffer(CircularByteBuffer.INFINITE_SIZE);
-//        writer = new PrintWriter(cbb.getOutputStream());
-//        messageReader = new InputStreamReader(cbb.getInputStream());
-//        reader = new BufferedReader(messageReader);
     }
 
+    /** Asynchronous message receiver
+     *
+     * @param ctx
+     * @param e
+     */
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
     {
@@ -50,9 +48,7 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler
         {
             TextWebSocketFrame text = (TextWebSocketFrame) frame;
             System.out.println("Handler: text message received: " + text.getText());
-            // Decrypt and display message here
             msgqueue.add(text.getText());
-//            writer.write(text.getText());
         } else if (frame instanceof PingWebSocketFrame)
         {
             System.out.println("Handler: received ping, sending pong");
@@ -67,6 +63,12 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler
         }
     }
 
+    /** Exception handler
+     *
+     * @param ctx
+     * @param e
+     * @throws Exception
+     */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception
     {
