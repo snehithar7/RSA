@@ -6,7 +6,6 @@
 package com.rsa.rsasecuritychatui;
 
 /**
- *
  * @author snehitha
  */
 public class Startingapplication {
@@ -17,10 +16,10 @@ public class Startingapplication {
     public static void main(String[] args) {
         // TODO code application logic here
         Loginform n = new Loginform();
-        n.setLocation(380,250);
+        n.setLocation(380, 250);
         n.setVisible(true);
-        
-        
+
+
     }
-    
+
 }

@@ -18,8 +18,7 @@ public class Helpers {
             while ((inputStr = streamReader.readLine()) != null)
                 responseStrBuilder.append(inputStr);
             return responseStrBuilder.toString();
-        } catch (Exception e)
-        {
+        } catch (Exception e) {
             e.printStackTrace();
         }
 

@@ -15,6 +15,8 @@ public class LeaveMessage extends Message {
         return user;
     }
 
-    public String getType() { return type; }
+    public String getType() {
+        return type;
+    }
 
 }

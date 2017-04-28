@@ -25,8 +25,12 @@ public class JoinMessage extends Message {
         return publicModulus;
     }
 
-    public BigInteger getPublicExponent() { return publicExponent; }
+    public BigInteger getPublicExponent() {
+        return publicExponent;
+    }
 
-    public String getType() { return type; }
+    public String getType() {
+        return type;
+    }
 
 }

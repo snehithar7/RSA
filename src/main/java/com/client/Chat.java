@@ -14,13 +14,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * Created by alec.ferguson on 4/27/2017.
  */
 public class Chat {
+    public Set<String> users;
     // Map of connected users
     private Map<String, ChatUser> connectedUsersMap = new ConcurrentHashMap<>();
     private WebSocketClient client;
     private ChatUser activeUser;
-    public Set<String> users;
 
-    /** Class for managing chat history for each user and sending/receiving
+    /**
+     * Class for managing chat history for each user and sending/receiving
      * chat messages. Wraps the chat WebSocket client.
      *
      * @param userName
@@ -44,42 +45,40 @@ public class Chat {
                 rsakey);
     }
 
-    /** Send a chat message to another user.
+    /**
+     * Send a chat message to another user.
      *
      * @param message
      * @param targetUser
      */
     public void sendChatMessage(String message,
-                                 String targetUser)
-    {
+                                String targetUser) {
         // Find target user
         ChatUser user = connectedUsersMap.get(targetUser);
         // Send encrypted message
         sendMessage(
                 new ChatMessage(
-                    targetUser,
-                    activeUser.getUsername(),
-                    user.getRsa().encrypt(message))
+                        targetUser,
+                        activeUser.getUsername(),
+                        user.getRsa().encrypt(message))
                         .toJson());
     }
 
-    /** Internal method for sending all messages
+    /**
+     * Internal method for sending all messages
      *
      * @param message
      */
-    private void sendMessage(String message)
-    {
-        try
-        {
+    private void sendMessage(String message) {
+        try {
             client.sendMessage(message);
-        } catch(Exception e)
-        {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    /** Read all pending messages from the message queue
-     *
+    /**
+     * Read all pending messages from the message queue
      */
     public void readMessages() {
         try {
@@ -108,7 +107,8 @@ public class Chat {
     }
 
 
-    /** Get the map of connected users.
+    /**
+     * Get the map of connected users.
      *
      * @return
      */
@@ -116,7 +116,8 @@ public class Chat {
         return connectedUsersMap;
     }
 
-    /** Handle a 'join' message (a user joins the chat).
+    /**
+     * Handle a 'join' message (a user joins the chat).
      *
      * @param message
      */
@@ -133,7 +134,8 @@ public class Chat {
                 new ChatUser(message.getUser(), rsa, rsaKey));
     }
 
-    /** Handle a 'leave' message (a user has left the chat).
+    /**
+     * Handle a 'leave' message (a user has left the chat).
      *
      * @param message
      */
@@ -142,9 +144,10 @@ public class Chat {
         connectedUsersMap.remove(message.getUser());
     }
 
-    /** Handle a chat message from a given user.
-     *  Update the chat history between this user and ourselves
-     *  to add the new message.
+    /**
+     * Handle a chat message from a given user.
+     * Update the chat history between this user and ourselves
+     * to add the new message.
      *
      * @param message
      */

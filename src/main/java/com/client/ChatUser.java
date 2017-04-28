@@ -29,15 +29,15 @@ public class ChatUser {
         return chatHistory;
     }
 
+    public void setChatHistory(String chatHistory) {
+        this.chatHistory = chatHistory;
+    }
+
     public RSA getRsa() {
         return rsa;
     }
 
     public RSAKey getRsaKey() {
         return rsaKey;
-    }
-
-    public void setChatHistory(String chatHistory) {
-        this.chatHistory = chatHistory;
     }
 }

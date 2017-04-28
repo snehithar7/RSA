@@ -6,47 +6,36 @@ package com.client;
  */
 
 import com.globals.Globals;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import com.security.rsa.RSA;
 import com.security.rsa.RSAKey;
-import jdk.nashorn.internal.parser.JSONParser;
-import org.json.JSONObject;
 
 import javax.swing.*;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.GenericType;
-import javax.ws.rs.core.Response;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.math.BigInteger;
 import java.net.URI;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import static java.awt.SystemColor.text;
-
 /**
- *
  * @author alec.ferguson
  */
 public class ChatWindowUI extends javax.swing.JFrame {
     private String serverUri;
     private String userName;
     private Chat chat;
-
-    /** Creates new form ChatWindowUI
+    // Variables declaration - do not modify
+    private javax.swing.JLabel activeUserLabel;
+    private javax.swing.JList<String> activeUserList;
+    private javax.swing.DefaultListModel activeUserListModel;
+    private javax.swing.JScrollPane activeUserListScrollPane;
+    private javax.swing.JTextArea chatTextArea;
+    private javax.swing.JScrollPane chatTextAreaScrollPane;
+    private javax.swing.JButton enterButton;
+    private javax.swing.JTextArea inputTextArea;
+    private javax.swing.JScrollPane inputTextAreaScrollPane;
+    private javax.swing.JLabel userListLabel;
+    private javax.swing.JTextField usernameTextField;
+    /**
+     * Creates new form ChatWindowUI
      *
      * @param userName
      * @param serverUri
@@ -56,20 +45,18 @@ public class ChatWindowUI extends javax.swing.JFrame {
     public ChatWindowUI(String userName,
                         String serverUri,
                         RSA rsa,
-                        RSAKey rsakey)
-    {
+                        RSAKey rsakey) {
         this.serverUri = serverUri;
         this.userName = userName;
         initComponents();
 
-        try
-        {
+        try {
             chat = new Chat(
                     this.userName,
                     new URI(this.serverUri + Globals.WS_PATH),
                     rsa,
                     rsakey);
-        } catch(Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
         ScheduledExecutorService executor =
@@ -77,28 +64,48 @@ public class ChatWindowUI extends javax.swing.JFrame {
         executor.scheduleAtFixedRate(new messageReader(), 0, 100, TimeUnit.MILLISECONDS);
     }
 
-    /** Thread for reading messages
-     *
+    /**
+     * @param args the command line arguments
      */
-    public class messageReader implements Runnable {
-        @Override
-        public void run() {
-            chat.readMessages();
-
-            // Users leaving is not yet implemented
-            for(String user: chat.getConnectedUsersMap().keySet()) {
-                // Not very efficient, but it works for now.
-                if(!activeUserListModel.contains(user)) {
-                    activeUserListModel.addElement(user);
+    public static void main(final String args[]) {
+        /* Set the Nimbus look and feel */
+        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html
+         */
+        try {
+            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    break;
                 }
             }
-            // Also update the chat log after reading messages
-            if (!activeUserList.isSelectionEmpty()) {
-                chatTextArea.setText(chat.getConnectedUsersMap().
-                        get(activeUserList.getSelectedValue()).
-                        getChatHistory());
-            }
+        } catch (ClassNotFoundException ex) {
+            java.util.logging.Logger.getLogger(ChatWindowUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (InstantiationException ex) {
+            java.util.logging.Logger.getLogger(ChatWindowUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            java.util.logging.Logger.getLogger(ChatWindowUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+            java.util.logging.Logger.getLogger(ChatWindowUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
+        //</editor-fold>
+
+        /* Create and display the form */
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                RSAKey testkey = new RSAKey();
+                testkey.GenerateKeys();
+
+                RSA testRSA = new RSA(testkey);
+
+                new ChatWindowUI(
+                        args[0],
+                        "http://127.0.0.1:4000",
+                        testRSA,
+                        testkey).setVisible(true);
+            }
+        });
     }
 
     /**
@@ -205,15 +212,16 @@ public class ChatWindowUI extends javax.swing.JFrame {
         pack();
     }// </editor-fold>
 
-    /** Update the chat box to include a new message from us:
-     *    ex. username: hello
-     *  Then send a message over the socket to the target user via
-     *  the chat.
+    /**
+     * Update the chat box to include a new message from us:
+     * ex. username: hello
+     * Then send a message over the socket to the target user via
+     * the chat.
      *
      * @param evt
      */
     private void enterButtonActionPerformed(java.awt.event.ActionEvent evt) {
-        if (inputTextArea.getText() != ""){
+        if (inputTextArea.getText() != "") {
             if (activeUserList.isSelectionEmpty()) {
                 // Display a prompt
                 chatTextArea.setText("Please select a user to chat with.");
@@ -241,77 +249,43 @@ public class ChatWindowUI extends javax.swing.JFrame {
         }
     }
 
-    /** Handle selection changes in the user list.
+    /**
+     * Handle selection changes in the user list.
      *
      * @param evt
      */
-    private void activeUserListValueChanged(javax.swing.event.ListSelectionEvent evt)
-    {
-        if (activeUserList.isSelectionEmpty())
-        {
+    private void activeUserListValueChanged(javax.swing.event.ListSelectionEvent evt) {
+        if (activeUserList.isSelectionEmpty()) {
             chatTextArea.setText("Please select a user to chat with.");
         } else {
             chatTextArea.setText(
                     chat.getConnectedUsersMap().
-                    get(activeUserList.getSelectedValue()).getChatHistory());
+                            get(activeUserList.getSelectedValue()).getChatHistory());
         }
     }
 
     /**
-     * @param args the command line arguments
+     * Thread for reading messages
      */
-    public static void main(final String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
+    public class messageReader implements Runnable {
+        @Override
+        public void run() {
+            chat.readMessages();
+
+            // Users leaving is not yet implemented
+            for (String user : chat.getConnectedUsersMap().keySet()) {
+                // Not very efficient, but it works for now.
+                if (!activeUserListModel.contains(user)) {
+                    activeUserListModel.addElement(user);
                 }
             }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(ChatWindowUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(ChatWindowUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(ChatWindowUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(ChatWindowUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                RSAKey testkey = new RSAKey();
-                testkey.GenerateKeys();
-
-                RSA testRSA = new RSA(testkey);
-
-                new ChatWindowUI(
-                        args[0],
-                        "http://127.0.0.1:4000",
-                        testRSA,
-                        testkey).setVisible(true);
+            // Also update the chat log after reading messages
+            if (!activeUserList.isSelectionEmpty()) {
+                chatTextArea.setText(chat.getConnectedUsersMap().
+                        get(activeUserList.getSelectedValue()).
+                        getChatHistory());
             }
-        });
+        }
     }
-
-    // Variables declaration - do not modify
-    private javax.swing.JLabel activeUserLabel;
-    private javax.swing.JList<String> activeUserList;
-    private javax.swing.DefaultListModel activeUserListModel;
-    private javax.swing.JScrollPane activeUserListScrollPane;
-    private javax.swing.JTextArea chatTextArea;
-    private javax.swing.JScrollPane chatTextAreaScrollPane;
-    private javax.swing.JButton enterButton;
-    private javax.swing.JTextArea inputTextArea;
-    private javax.swing.JScrollPane inputTextAreaScrollPane;
-    private javax.swing.JLabel userListLabel;
-    private javax.swing.JTextField usernameTextField;
     // End of variables declaration
 }

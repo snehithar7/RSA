@@ -27,6 +27,8 @@ public class ChatMessage extends Message {
         return message;
     }
 
-    public String getType() { return type; }
+    public String getType() {
+        return type;
+    }
 
 }

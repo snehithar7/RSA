@@ -31,7 +31,11 @@ public class Client {
         return publicKey;
     }
 
-    public BigInteger getExponent() { return exponent; }
+    public BigInteger getExponent() {
+        return exponent;
+    }
 
-    public Channel getChannel() {return channel; }
+    public Channel getChannel() {
+        return channel;
+    }
 }

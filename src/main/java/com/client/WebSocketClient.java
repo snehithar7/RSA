@@ -10,42 +10,38 @@ import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 import org.jboss.netty.handler.codec.http.websocketx.*;
 
-import java.io.*;
 import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Queue;
 import java.util.concurrent.Executors;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Created by alec on 3/29/17.
  */
-public class WebSocketClient
-{
+public class WebSocketClient {
     private final URI uri;
     private final ClientBootstrap bootstrap;
     private final String protocol;
     private final WebSocketClientHandshaker handshaker;
     private final ChannelPipelineFactory factory;
     private final WebSocketClientHandler handler;
-    private Channel chan;
     public Queue<String> msgqueue;
+    private Channel chan;
 
-    /** Construct a websocket client and connect
+    /**
+     * Construct a websocket client and connect
      *
-     * @param uri URL to ws endpoint
-     * @param username Username to log in with
+     * @param uri       URL to ws endpoint
+     * @param username  Username to log in with
      * @param publicKey Public modulus for this user
-     * @param exponent Public exponent for this user
+     * @param exponent  Public exponent for this user
      */
     public WebSocketClient(URI uri,
                            String username,
                            BigInteger publicKey,
-                           BigInteger exponent)
-    {
+                           BigInteger exponent) {
         this.uri = uri;
         protocol = uri.getScheme();
         chan = null;
@@ -73,10 +69,8 @@ public class WebSocketClient
         handler = new WebSocketClientHandler(handshaker);
         msgqueue = handler.msgqueue;
 
-        factory = new ChannelPipelineFactory()
-        {
-            public ChannelPipeline getPipeline() throws Exception
-            {
+        factory = new ChannelPipelineFactory() {
+            public ChannelPipeline getPipeline() throws Exception {
                 ChannelPipeline pipe = Channels.pipeline();
                 pipe.addLast("decoder", new HttpResponseDecoder());
                 pipe.addLast("encoder", new HttpRequestEncoder());
@@ -89,59 +83,55 @@ public class WebSocketClient
         bootstrap.setPipelineFactory(factory);
 
         // Connect
-        try
-        {
+        try {
             connect();
-        } catch(Exception e)
-        {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    /** Perform the ws connection
-     *
-     * @throws Exception
-     */
-    private void connect() throws Exception
-    {
-        System.out.println("Connected");
-        ChannelFuture future = bootstrap.connect(
-            new InetSocketAddress(uri.getHost(), uri.getPort()));
-        future.syncUninterruptibly();
-        chan = future.getChannel();
-        handshaker.handshake(chan).syncUninterruptibly();
-    }
-
-    /** Send a message (String) to the server
-     *
-     * @param message
-     * @throws Exception
-     */
-    public void sendMessage(String message) throws Exception
-    {
-        System.out.println("Sending message " + message);
-        chan.write(new TextWebSocketFrame(message));
-    }
-
-    /** Disconnect client
-     *
-     */
-    public void disconnect()
-    {
-        System.out.println("Disconnected");
-        chan.write(new CloseWebSocketFrame());
-        chan.getCloseFuture().awaitUninterruptibly();
-        chan.close();
-        bootstrap.releaseExternalResources();
-    }
-
-    public static void main(String[] args) throws Exception
-    {
+    public static void main(String[] args) throws Exception {
         RSA rsa = new RSA();
         RSAKey key = new RSAKey();
         WebSocketClient ws = new WebSocketClient(
                 new URI("ws://localhost:4000/ws"),
                 args[0], new BigInteger("1235823"),
                 new BigInteger("1239123123"));
+    }
+
+    /**
+     * Perform the ws connection
+     *
+     * @throws Exception
+     */
+    private void connect() throws Exception {
+        System.out.println("Connected");
+        ChannelFuture future = bootstrap.connect(
+                new InetSocketAddress(uri.getHost(), uri.getPort()));
+        future.syncUninterruptibly();
+        chan = future.getChannel();
+        handshaker.handshake(chan).syncUninterruptibly();
+    }
+
+    /**
+     * Send a message (String) to the server
+     *
+     * @param message
+     * @throws Exception
+     */
+    public void sendMessage(String message) throws Exception {
+        System.out.println("Sending message " + message);
+        chan.write(new TextWebSocketFrame(message));
+    }
+
+    /**
+     * Disconnect client
+     */
+    public void disconnect() {
+        System.out.println("Disconnected");
+        chan.write(new CloseWebSocketFrame());
+        chan.getCloseFuture().awaitUninterruptibly();
+        chan.close();
+        bootstrap.releaseExternalResources();
     }
 }

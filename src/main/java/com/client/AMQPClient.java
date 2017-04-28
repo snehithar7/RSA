@@ -20,11 +20,12 @@ public class AMQPClient {
     // Use a hashmap of lists to represent the text sent to/received from each user
     private final HashMap<String, String> messages;
 
-    /** Initialize an AMQP client for consuming/sending messages.
+    /**
+     * Initialize an AMQP client for consuming/sending messages.
      *
-     * @param uri URI of the producer
-     *     (ex. amqp://userName:password@hostname:portNumber/virtualHost)
-     * @param userName username for this client
+     * @param uri        URI of the producer
+     *                   (ex. amqp://userName:password@hostname:portNumber/virtualHost)
+     * @param userName   username for this client
      * @param privateKey private key for this client (for decrypting messages)
      */
     public AMQPClient(String uri,
@@ -77,11 +78,13 @@ public class AMQPClient {
         };
     }
 
-    /** Send a message to targetUser, encrypting the message with the user's
-     *  public key.
-     * @param targetUser Target username
+    /**
+     * Send a message to targetUser, encrypting the message with the user's
+     * public key.
+     *
+     * @param targetUser          Target username
      * @param targetUserPublicKey Target user's public key (for encrypting)
-     * @param message Client to send
+     * @param message             Client to send
      */
     public void sendMessage(String targetUser,
                             BigInteger targetUserPublicKey,
@@ -94,17 +97,18 @@ public class AMQPClient {
             String text = messages.get(targetUser);
             text += targetUser + ": " + message + "\n";
             messages.put(targetUser, text);
-        } catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    /** Return the text history for target user
+    /**
+     * Return the text history for target user
      *
      * @param targetUser Target user
      * @return String
      */
-    public String getMessages(String targetUser){
+    public String getMessages(String targetUser) {
         return messages.get(targetUser);
     }
 

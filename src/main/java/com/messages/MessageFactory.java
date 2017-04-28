@@ -7,7 +7,8 @@ import com.google.gson.Gson;
  */
 public class MessageFactory {
 
-    /** Factory for creating messages based on the message type.
+    /**
+     * Factory for creating messages based on the message type.
      *
      * @param messageType
      * @param message
@@ -16,7 +17,7 @@ public class MessageFactory {
     public Message getMessage(String messageType,
                               String message) {
         Gson gson = new Gson();
-        switch(messageType){
+        switch (messageType) {
             case MessageTypes.JOIN:
                 return gson.fromJson(message, JoinMessage.class);
             case MessageTypes.LEAVE:
